@@ -165,4 +165,109 @@ console.log(result3.content.items); // string[]
 
 ---
 
+## Q3: 为什么使用 `OPENAI_API_KEY` 配置 Qwen 模型还能跑通？
+
+**问题描述**：在 `.env` 文件中使用 `OPENAI_API_KEY` 配置 Qwen 模型（如 `qwen3-vl-plus`），为什么还能正常工作？是因为标准相同吗？
+
+**答案**：
+
+是的，这是因为 **OpenAI 兼容 API 标准**（OpenAI-compatible API）。主要原因如下：
+
+### 1. **OpenAI SDK 的灵活性**
+
+Midscene 使用 OpenAI SDK 来调用 AI 服务，但 SDK 支持通过 `baseURL` 参数指向不同的服务提供商：
+
+```typescript
+// 代码位置：midscene/packages/core/src/ai-model/service-caller/index.ts:139-150
+const openAIOptions = {
+  baseURL: openaiBaseURL,  // 可以指向任何 OpenAI 兼容的 API 端点
+  apiKey: openaiApiKey,     // 对应服务提供商的 API Key
+  // ...
+};
+
+const baseOpenAI = new OpenAI(openAIOptions);
+```
+
+### 2. **OpenAI 兼容 API 标准**
+
+许多模型提供商（如 Qwen、Gemini、豆包等）都提供了 **OpenAI 兼容的 API 接口**，这意味着：
+
+- ✅ 使用相同的 API 格式（`/v1/chat/completions`）
+- ✅ 使用相同的请求参数格式
+- ✅ 使用相同的响应格式
+- ✅ 只需要修改 `baseURL` 和 `modelName` 即可切换模型
+
+### 3. **配置示例**
+
+以 Qwen3-VL 为例：
+
+```bash
+# .env 文件
+OPENAI_API_KEY="sk-..."                    # Qwen 的 API Key（虽然变量名是 OPENAI_API_KEY）
+OPENAI_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"  # Qwen 的 API 端点
+MIDSCENE_MODEL_NAME="qwen3-vl-plus"       # Qwen 的模型名称
+```
+
+### 4. **为什么变量名是 `OPENAI_API_KEY`？**
+
+这是为了**向后兼容**和**简化配置**：
+
+- `OPENAI_API_KEY` 只是一个**环境变量名**，不代表只能用于 OpenAI
+- 实际使用的是对应服务提供商的 API Key（如 Qwen 的 API Key）
+- Midscene 会读取这个变量并传递给 OpenAI SDK，SDK 会根据 `baseURL` 发送到正确的服务端点
+
+### 5. **工作原理**
+
+```
+用户配置：
+├── OPENAI_API_KEY="qwen-api-key"          # Qwen 的 API Key
+├── OPENAI_BASE_URL="https://dashscope..." # Qwen 的 API 端点
+└── MIDSCENE_MODEL_NAME="qwen3-vl-plus"    # Qwen 的模型名
+
+Midscene 处理：
+├── 读取环境变量
+├── 创建 OpenAI SDK 实例（baseURL 指向 Qwen）
+└── 调用 Qwen 的 API（使用 OpenAI 兼容格式）
+
+实际请求：
+POST https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+Headers: Authorization: Bearer qwen-api-key
+Body: { model: "qwen3-vl-plus", messages: [...] }
+```
+
+### 6. **支持的模型提供商**
+
+根据 Midscene 文档，以下模型提供商都支持 OpenAI 兼容 API：
+
+- ✅ **Qwen**（通义千问）：`https://dashscope.aliyuncs.com/compatible-mode/v1`
+- ✅ **Gemini**：`https://generativelanguage.googleapis.com/v1beta/openai/`
+- ✅ **豆包**（火山引擎）：`https://ark.cn-beijing.volces.com/api/v3`
+- ✅ **OpenAI**：`https://api.openai.com/v1`（默认）
+
+### 7. **推荐配置方式**
+
+虽然可以使用 `OPENAI_API_KEY`，但 Midscene 推荐使用更明确的变量名：
+
+```bash
+# 推荐方式（更明确）
+MIDSCENE_MODEL_API_KEY="sk-..."
+MIDSCENE_MODEL_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
+MIDSCENE_MODEL_NAME="qwen3-vl-plus"
+MIDSCENE_MODEL_FAMILY="qwen3-vl"
+
+# 兼容方式（向后兼容）
+OPENAI_API_KEY="sk-..."
+OPENAI_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
+MIDSCENE_MODEL_NAME="qwen3-vl-plus"
+```
+
+**相关资源**：
+- 代码位置：`midscene/packages/core/src/ai-model/service-caller/index.ts:139-150`
+- 文档：[模型配置](https://midscenejs.com/zh/model-config)
+- 文档：[常用模型配置](https://midscenejs.com/zh/model-common-config)
+- 测试示例：`midscene-example/connectivity-test/tests/connectivity.test.ts`
+
+**标签**：#API #配置 #OpenAI兼容 #Qwen #模型配置
+
+---
 
