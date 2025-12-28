@@ -1,0 +1,418 @@
+import {
+  ApiOutlined,
+  ArrowDownOutlined,
+  ClearOutlined,
+  DownOutlined,
+  LoadingOutlined,
+} from '@ant-design/icons';
+import { Button, Input, List, Spin, Switch } from 'antd';
+import dayjs from 'dayjs';
+import { useEffect, useRef, useState } from 'react';
+import AutoConnectIcon from '../../icons/auto-connect.svg?react';
+import PlayIcon from '../../icons/play.svg?react';
+import {
+  BridgeConnector,
+  type BridgeStatus,
+} from '../../utils/bridgeConnector';
+import { iconForStatus } from '../misc';
+
+import './index.less';
+
+interface BridgeMessageItem {
+  id: string;
+  type: 'system' | 'status';
+  content: string;
+  timestamp: Date;
+  time: string;
+}
+
+const AUTO_CONNECT_STORAGE_KEY = 'midscene-bridge-auto-connect';
+const BRIDGE_SERVER_URL_KEY = 'midscene-bridge-server-url';
+const DEFAULT_SERVER_URL = 'ws://localhost:3766';
+
+export default function Bridge() {
+  const [bridgeStatus, setBridgeStatus] = useState<BridgeStatus>('closed');
+  const [messageList, setMessageList] = useState<BridgeMessageItem[]>([]);
+  const [showScrollToBottomButton, setShowScrollToBottomButton] =
+    useState(false);
+  const [autoConnect, setAutoConnect] = useState<boolean>(() => {
+    const saved = localStorage.getItem(AUTO_CONNECT_STORAGE_KEY);
+    return saved === 'true';
+  });
+  const [serverUrl, setServerUrl] = useState<string>(() => {
+    // Only restore from localStorage if user has customized it
+    return localStorage.getItem(BRIDGE_SERVER_URL_KEY) || '';
+  });
+  const [isServerConfigExpanded, setIsServerConfigExpanded] = useState(false);
+  const messageListRef = useRef<HTMLDivElement>(null);
+  // useRef to track the ID of the connection status message
+  const connectionStatusMessageId = useRef<string | null>(null);
+
+  const appendBridgeMessage = (content: string) => {
+    // if there is a connection status message, append all messages to the existing message
+    if (connectionStatusMessageId.current) {
+      setMessageList((prev) =>
+        prev.map((msg) =>
+          msg.id === connectionStatusMessageId.current
+            ? {
+                ...msg,
+                content: `${msg.content}\n${dayjs().format('HH:mm:ss.SSS')} - ${content}`,
+                timestamp: new Date(),
+                time: dayjs().format('HH:mm:ss.SSS'),
+              }
+            : msg,
+        ),
+      );
+    } else {
+      // create a new message (only when there is no active connection)
+      const newMessage: BridgeMessageItem = {
+        id: `message-${Date.now()}`,
+        type: 'status', // connection session messages are unified as status type
+        content: `${dayjs().format('HH:mm:ss.SSS')} - ${content}`,
+        timestamp: new Date(),
+        time: dayjs().format('HH:mm:ss.SSS'),
+      };
+
+      // set the connection status message ID, all subsequent messages will be appended to this message
+      connectionStatusMessageId.current = newMessage.id;
+      setMessageList((prev) => [...prev, newMessage]);
+    }
+  };
+
+  const bridgeConnectorRef = useRef<BridgeConnector | null>(null);
+
+  // Initialize BridgeConnector when serverUrl changes or on first mount
+  useEffect(() => {
+    // Clean up existing connector
+    if (bridgeConnectorRef.current) {
+      bridgeConnectorRef.current.disconnect();
+    }
+
+    // Use custom serverUrl if provided, otherwise use default
+    const effectiveUrl = serverUrl || DEFAULT_SERVER_URL;
+
+    // Create new connector with current serverUrl
+    bridgeConnectorRef.current = new BridgeConnector(
+      (message, type) => {
+        appendBridgeMessage(message);
+        if (type === 'status') {
+          console.log('status tip changed event', type, message);
+        }
+      },
+      (status) => {
+        console.log('status changed event', status);
+        setBridgeStatus(status);
+
+        if (status !== 'connected') {
+          appendBridgeMessage(`Bridge status changed to ${status}`);
+        }
+      },
+      effectiveUrl !== DEFAULT_SERVER_URL ? effectiveUrl : undefined,
+    );
+
+    return () => {
+      bridgeConnectorRef.current?.disconnect();
+    };
+  }, [serverUrl]);
+
+  useEffect(() => {
+    // Auto-connect on component mount if enabled
+    // Only check on initial mount, not when autoConnect changes
+    if (
+      autoConnect &&
+      bridgeStatus === 'closed' &&
+      bridgeConnectorRef.current
+    ) {
+      startConnection();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
+
+  const stopConnection = () => {
+    bridgeConnectorRef.current?.disconnect();
+  };
+
+  const startConnection = async () => {
+    // only reset the connection status message ID when starting a new connection
+    if (bridgeStatus === 'closed') {
+      connectionStatusMessageId.current = null;
+    }
+    bridgeConnectorRef.current?.connect();
+  };
+
+  const handleAutoConnectChange = (checked: boolean) => {
+    setAutoConnect(checked);
+    localStorage.setItem(AUTO_CONNECT_STORAGE_KEY, String(checked));
+  };
+
+  const handleServerUrlChange = (value: string) => {
+    setServerUrl(value);
+
+    // Only store to localStorage if user has customized the value
+    // If empty or default, remove from localStorage to use default
+    if (value && value !== DEFAULT_SERVER_URL) {
+      localStorage.setItem(BRIDGE_SERVER_URL_KEY, value);
+    } else {
+      localStorage.removeItem(BRIDGE_SERVER_URL_KEY);
+    }
+  };
+
+  // clear the message list
+  const clearMessageList = () => {
+    setMessageList([]);
+    connectionStatusMessageId.current = null;
+  };
+
+  // check if scrolled to bottom
+  const checkIfScrolledToBottom = () => {
+    if (messageListRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = messageListRef.current;
+
+      // if content height is less than or equal to container height, no need to scroll, hide button
+      if (scrollHeight <= clientHeight) {
+        setShowScrollToBottomButton(false);
+        return;
+      }
+
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10px tolerance
+      setShowScrollToBottomButton(!isAtBottom);
+    }
+  };
+
+  // scroll to bottom when message list updated
+  useEffect(() => {
+    if (messageList.length > 0) {
+      if (messageListRef.current) {
+        messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+      }
+      // check status after scroll
+      checkIfScrolledToBottom();
+    }
+  }, [messageList]);
+
+  // listen to scroll event
+  useEffect(() => {
+    const container = messageListRef.current;
+    if (container) {
+      container.addEventListener('scroll', checkIfScrolledToBottom);
+      // initial check
+      checkIfScrolledToBottom();
+      return () => {
+        container.removeEventListener('scroll', checkIfScrolledToBottom);
+      };
+    }
+  }, []);
+
+  // manually scroll to bottom
+  const handleScrollToBottom = () => {
+    if (messageListRef.current) {
+      messageListRef.current.scrollTo({
+        top: messageListRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+      setShowScrollToBottomButton(false);
+    }
+  };
+
+  let statusIcon;
+  let statusTip: string;
+  let statusBtn;
+  if (bridgeStatus === 'closed') {
+    statusIcon = iconForStatus('closed');
+    statusTip = 'Closed';
+    statusBtn = (
+      <Button
+        type="primary"
+        onClick={() => {
+          startConnection();
+        }}
+      >
+        Allow connection
+      </Button>
+    );
+  } else if (bridgeStatus === 'listening' || bridgeStatus === 'disconnected') {
+    statusIcon = (
+      <Spin
+        className="status-loading-icon"
+        indicator={<LoadingOutlined spin />}
+        size="small"
+      />
+    );
+    statusTip = 'Listening for connection';
+    statusBtn = (
+      <Button className="stop-button" onClick={stopConnection}>
+        Stop
+      </Button>
+    );
+  } else if (bridgeStatus === 'connected') {
+    statusIcon = iconForStatus('connected');
+    statusTip = 'Connected';
+
+    statusBtn = (
+      <Button
+        className="stop-button"
+        onClick={() => {
+          stopConnection();
+        }}
+      >
+        Stop
+      </Button>
+    );
+  } else {
+    statusIcon = iconForStatus('failed');
+    statusTip = `Unknown Status - ${bridgeStatus}`;
+    statusBtn = null;
+  }
+
+  return (
+    <div className="bridge-mode-container">
+      <div className="playground-form-container">
+        <div className="form-part" />
+        {messageList.length > 0 && (
+          <div className="clear-button-container">
+            <Button
+              size="small"
+              icon={<ClearOutlined />}
+              onClick={clearMessageList}
+              type="text"
+              className="clear-button"
+            />
+          </div>
+        )}
+        {/* middle dialog area */}
+        <div className="middle-dialog-area">
+          <div ref={messageListRef} className="info-list-container">
+            <div className="mode-header">
+              <div className="mode-icon">
+                <ApiOutlined style={{ fontSize: '12px' }} />
+              </div>
+              <h2 className="mode-title">Bridge Mode</h2>
+            </div>
+            <p className="bridge-mode-description">
+              In Bridge Mode, you can control this browser by the Midscene SDK
+              running in the local terminal. This is useful for interacting both
+              through scripts and manually, or to reuse cookies.{' '}
+              <a
+                href="https://www.midscenejs.com/bridge-mode-by-chrome-extension"
+                target="_blank"
+                rel="noreferrer"
+              >
+                More about bridge mode
+              </a>
+            </p>
+            {/* Server Configuration */}
+            <div className="server-config-section">
+              <div
+                className="server-config-header"
+                onClick={() =>
+                  setIsServerConfigExpanded(!isServerConfigExpanded)
+                }
+              >
+                <DownOutlined
+                  className={`server-config-arrow ${isServerConfigExpanded ? 'expanded' : ''}`}
+                />
+                <span className="server-config-title">
+                  Use remote server (optional)
+                </span>
+              </div>
+              {isServerConfigExpanded && (
+                <div className="server-config-content">
+                  <Input
+                    value={serverUrl}
+                    onChange={(e) => handleServerUrlChange(e.target.value)}
+                    placeholder="ws://localhost:3766"
+                    disabled={bridgeStatus !== 'closed'}
+                    className="server-config-input"
+                  />
+                  <small className="server-config-hint">
+                    {serverUrl && serverUrl !== DEFAULT_SERVER_URL ? (
+                      <>Remote mode: Connect to {serverUrl}</>
+                    ) : (
+                      <>Local mode (default): ws://localhost:3766</>
+                    )}
+                  </small>
+                </div>
+              )}
+            </div>
+            {messageList.length > 0 && (
+              <List
+                itemLayout="vertical"
+                dataSource={messageList}
+                renderItem={(item) => (
+                  <List.Item key={item.id} className="list-item">
+                    <div className="system-message-container">
+                      <div className="mode-header">
+                        <div className="mode-icon">
+                          <ApiOutlined style={{ fontSize: '12px' }} />
+                        </div>
+                        <span className="mode-title">Bridge Mode</span>
+                      </div>
+                      <div className="system-message-content">
+                        <div className="message-body">
+                          <div className="system-message-text">
+                            {item.content}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </List.Item>
+                )}
+              />
+            )}
+          </div>
+          {/* scroll to bottom button */}
+          {messageList.length > 0 && showScrollToBottomButton && (
+            <Button
+              className="scroll-to-bottom-button"
+              type="primary"
+              shape="circle"
+              icon={<ArrowDownOutlined />}
+              onClick={handleScrollToBottom}
+              size="large"
+            />
+          )}
+        </div>
+      </div>
+
+      {/* bottom buttons */}
+      <div className="bottom-button-container">
+        {bridgeStatus === 'closed' ? (
+          <>
+            <div className="auto-connect-container">
+              <span className="auto-connect-icon">
+                <AutoConnectIcon />
+              </span>
+              <span className="auto-connect-label">
+                Auto allow in Bridge Mode
+              </span>
+              <Switch
+                checked={autoConnect}
+                onChange={handleAutoConnectChange}
+                size="default"
+              />
+            </div>
+            <Button
+              type="primary"
+              className="bottom-action-button"
+              icon={<PlayIcon />}
+              onClick={() => {
+                startConnection();
+              }}
+            >
+              Allow Connection
+            </Button>
+          </>
+        ) : (
+          <div className="bottom-status-bar">
+            <div className="bottom-status-text">
+              <span className="bottom-status-icon">{statusIcon}</span>
+              <span className="bottom-status-tip">{statusTip}</span>
+            </div>
+            <div className="bottom-status-divider" />
+            <div className="bottom-status-btn">{statusBtn}</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

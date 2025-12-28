@@ -1,0 +1,607 @@
+@import '../common.less';
+
+.side-bar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  border-radius: 16px;
+  background: #fff;
+
+  .page-nav {
+    height: 60px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    flex-shrink: 0;
+
+    .page-nav-left {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+
+      .page-nav-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+
+        .icon-button {
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+
+          &:hover {
+            background: #f5f5f5;
+          }
+        }
+      }
+    }
+  }
+
+  .top-controls {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  .report-overview {
+    flex-shrink: 0;
+  }
+
+  .task-token-section {
+    flex-shrink: 0;
+    height: 44px;
+    line-height: 44px;
+    padding: 0 8px !important;
+    font-size: 12px;
+  }
+
+  .task-meta {
+    color: @weak-text;
+    font-weight: normal;
+    padding-left: @side-horizontal-padding;
+  }
+
+  .task-meta-tokens {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    padding: 0 8px !important;
+
+    .token-total-label {
+      flex: 1;
+      font-weight: 500;
+      color: #808080;
+      text-align: left;
+      font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code',
+        'Fira Mono', 'Roboto Mono', monospace;
+      white-space: nowrap;
+    }
+
+    .token-value {
+      font-size: 14px;
+      color: #595959;
+      font-weight: normal;
+      line-height: 1.2;
+      min-width: 70px;
+      text-align: right;
+      font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code',
+        'Fira Mono', 'Roboto Mono', monospace;
+      white-space: nowrap;
+      display: inline-block;
+    }
+  }
+
+  .side-seperator {
+    border-top: 1px solid transparent;
+
+    &.side-seperator-line {
+      margin: 0 12px;
+    }
+
+    &.side-seperator-space-up {
+      margin-top: @side-vertical-spacing;
+    }
+
+    &.side-seperator-space-down {
+      margin-bottom: @side-vertical-spacing;
+    }
+  }
+
+  .side-sub-title {
+    padding: 8px 8px 6px 8px;
+    margin-bottom: 0;
+    font-weight: 500;
+    color: #1a1a1a;
+    flex-shrink: 0;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
+  }
+
+  // Table styles
+  .tasks-table {
+    padding: 0 12px;
+
+    // Remove all antd default borders and spacing
+    &.ant-table-wrapper .ant-table {
+      background: transparent;
+    }
+
+    .ant-table {
+      background: transparent;
+    }
+
+    .ant-table-thead > tr > th {
+      background: transparent;
+      border-bottom: none;
+      padding: 0 8px !important;
+      height: 28px;
+      font-size: 12px;
+      color: #808080;
+      font-weight: 500;
+
+      &:before {
+        display: none;
+      }
+
+      &.column-type {
+        text-align: left;
+      }
+
+      &.column-time,
+      &.column-intent,
+      &.column-model,
+      &.column-prompt,
+      &.column-completion {
+        text-align: right;
+      }
+    }
+
+    // Sticky header background
+    .ant-table-thead > tr > th.ant-table-cell-fix-sticky {
+      background: transparent;
+    }
+
+    .ant-table-tbody {
+      background: transparent;
+
+      > tr {
+        background: transparent;
+
+        > td {
+          border-bottom: none;
+          padding: 0 8px !important;
+          background: transparent;
+
+          &.column-type {
+            text-align: left;
+          }
+
+          &.column-time,
+          &.column-intent,
+          &.column-model,
+          &.column-prompt,
+          &.column-completion {
+            text-align: right;
+          }
+        }
+
+        &.group-header-row {
+          cursor: default;
+
+          > td {
+            padding: 8px 0 0 0 !important;
+          }
+        }
+
+        &.task-row {
+          cursor: pointer;
+          transition: background 0.1s;
+          border-radius: 8px;
+
+          > td {
+            height: 32px;
+            padding: 0 8px !important;
+
+            &:first-child {
+              border-top-left-radius: 8px;
+              border-bottom-left-radius: 8px;
+            }
+
+            &:last-child {
+              border-top-right-radius: 8px;
+              border-bottom-right-radius: 8px;
+            }
+          }
+
+          &:hover {
+            background: @hover-bg;
+
+            > td {
+              background: @hover-bg;
+            }
+          }
+
+          &.selected {
+            background: @selected-bg;
+
+            > td {
+              background: @selected-bg;
+            }
+          }
+        }
+      }
+    }
+
+    .ant-table-summary {
+      background: transparent;
+
+      .summary-separator-row > td {
+        padding: 0 !important;
+        height: auto;
+      }
+
+      .summary-row > td {
+        border-top: none;
+        padding: 0 8px !important;
+        height: 44px;
+        background: transparent;
+        text-align: right;
+        white-space: nowrap;
+
+        &:first-child {
+          text-align: left;
+        }
+
+        // Ensure number columns have minimum width
+        &:nth-child(2),
+        &:nth-child(3),
+        &:nth-child(4) {
+          min-width: 80px;
+        }
+      }
+    }
+
+    // Column styles
+    .column-type {
+      max-width: 100%;
+
+      .title {
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        color: #595959;
+        text-align: left;
+        max-width: 100%;
+
+        .status-icon {
+          display: inline-flex;
+          align-items: center;
+          color: #aaa;
+          font-size: 12px;
+          line-height: 10px;
+          margin-right: 6px;
+          flex-shrink: 0;
+        }
+
+        > span {
+          flex-shrink: 0; // Protect main text from shrinking
+          white-space: nowrap;
+        }
+
+        // Allow tags to shrink
+        .cache-tag,
+        .deepthink-tag {
+          flex-shrink: 1;
+          min-width: 0;
+          max-width: 100px; // Limit max width
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
+    }
+
+    .column-time,
+    .column-intent,
+    .column-model,
+    .column-prompt,
+    .column-cached-input,
+    .column-completion {
+      color: #595959;
+      font-size: 14px;
+      font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code',
+        'Fira Mono', 'Roboto Mono', monospace;
+      white-space: nowrap;
+    }
+  }
+
+  .execution-info-section {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+
+    .execution-info-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      height: 32px;
+      line-height: 32px;
+      padding-left: 20px;
+      padding-right: 20px;
+      flex-shrink: 0;
+
+      .execution-info-title-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .execution-info-title-right {
+        display: flex;
+        align-items: center;
+
+        .token-usage-checkbox {
+          .ant-checkbox-inner {
+            width: 14px;
+            height: 14px;
+            background-image: url('../../icons/checkbox-unchecked.svg');
+            background-size: contain;
+            border: none;
+          }
+
+          &.ant-checkbox-checked .ant-checkbox-inner {
+            background-image: url('../../icons/checkbox-checked.svg');
+          }
+        }
+
+        span {
+          color: #595959;
+          font-size: 12px;
+          padding-right: 0;
+        }
+      }
+    }
+
+    .executions-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      min-height: 0;
+
+      .executions-tip {
+        padding: 12px 20px;
+        font-size: 12px;
+        color: #8c8c8c;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+
+        .tip-icon {
+          color: #8c8c8c;
+          font-weight: 500;
+          flex-shrink: 0;
+        }
+
+        .tip-text {
+          line-height: 1.5;
+
+          a {
+            color: #1890ff;
+            text-decoration: none;
+
+            &:hover {
+              text-decoration: underline;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Light mode Tag styles
+.cache-tag {
+  color: #1890ff;
+  background-color: #e0f5ff;
+}
+
+.deepthink-tag {
+  color: #722ed1;
+  background-color: #f7ebff;
+}
+
+// Dark mode styles
+[data-theme='dark'] {
+  .side-bar {
+    background: #1f1f1f;
+
+    .page-nav {
+      background: #1f1f1f;
+
+      .page-nav-left {
+        .page-nav-toolbar .icon-button {
+          &:hover {
+            background: rgba(255, 255, 255, 0.08);
+          }
+
+          svg {
+            color: #f8fafd;
+          }
+        }
+
+        .page-nav-title {
+          color: #f8fafd;
+
+          .page-nav-title-hint {
+            color: rgba(255, 255, 255, 0.45);
+          }
+        }
+      }
+    }
+
+    .side-sub-title {
+      color: #f8fafd;
+    }
+
+    .tasks-table {
+      .ant-table-thead > tr > th {
+        color: rgba(255, 255, 255, 0.45);
+        background: #1f1f1f;
+      }
+
+      // Sticky header background for dark mode
+      .ant-table-thead > tr > th.ant-table-cell-fix-sticky {
+        background: #1f1f1f;
+      }
+
+      .ant-table-tbody > tr {
+        &.task-row {
+          &:hover {
+            background: rgba(255, 255, 255, 0.08);
+
+            > td {
+              background: rgba(255, 255, 255, 0.08);
+            }
+          }
+
+          &.selected {
+            background: rgba(255, 255, 255, 0.16);
+
+            > td {
+              background: rgba(255, 255, 255, 0.16);
+            }
+          }
+        }
+      }
+
+      .column-type .title {
+        color: #d1d3db;
+
+        .status-icon {
+          color: rgba(255, 255, 255, 0.45);
+        }
+      }
+
+      .column-time,
+      .column-intent,
+      .column-model,
+      .column-prompt,
+      .column-cached-input,
+      .column-completion {
+        color: #f8fafd;
+      }
+    }
+
+    .side-item {
+      &:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      &.selected {
+        background: rgba(255, 255, 255, 0.16);
+      }
+    }
+
+    .side-item-name {
+      color: #f8fafd;
+
+      .status-icon {
+        color: rgba(255, 255, 255, 0.45);
+      }
+
+      .title {
+        color: #f8fafd;
+      }
+    }
+
+    .task-meta {
+      color: rgba(255, 255, 255, 0.45);
+    }
+
+    .task-meta-tokens {
+      .token-total-label {
+        color: rgba(255, 255, 255, 0.45);
+      }
+
+      .token-value {
+        color: #f8fafd;
+      }
+    }
+
+    .table-header {
+      color: rgba(255, 255, 255, 0.45);
+    }
+
+    .execution-info-section {
+      .execution-info-title {
+        color: #f8fafd;
+
+        .execution-info-title-left {
+          color: #f8fafd;
+
+          svg {
+            color: #f8fafd;
+          }
+        }
+
+        .execution-info-title-right span {
+          color: #f8fafd;
+        }
+
+        .token-usage-checkbox {
+          .ant-checkbox-inner {
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+          }
+
+          &.ant-checkbox-checked .ant-checkbox-inner {
+            border: none !important;
+          }
+        }
+      }
+
+      .executions-wrapper .executions-tip {
+        color: rgba(255, 255, 255, 0.45);
+
+        .tip-icon {
+          color: rgba(255, 255, 255, 0.45);
+        }
+
+        .tip-text a {
+          color: #1890ff;
+        }
+      }
+    }
+
+    // SVG icons should inherit text color
+    svg {
+      color: currentColor;
+    }
+
+    // Tag styles for dark mode
+    .cache-tag {
+      color: #1890ff !important;
+      background-color: rgba(24, 144, 255, 0.15) !important;
+    }
+
+    .deepthink-tag {
+      color: #9254de !important;
+      background-color: rgba(146, 84, 222, 0.15) !important;
+    }
+  }
+}
